@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4 Core Psychological Components</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #04060d;
+    --E: #ff3d5a;
+    --F: #ffad5c;
+    --I: #5cdcff;
+    --B: #5cffa3;
+    --text: #e0e4f0;
+    --dim: #2a3050;
+    --panel: rgba(8,12,22,0.96);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    overflow: hidden;
+    width:100vw; height:100vh;
+    user-select: none;
+  }
+
+  canvas { display:block; position:fixed; top:0; left:0; }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position:fixed; top:0; left:0; right:0; height:52px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 28px;
+    background:rgba(4,6,13,0.88);
+    backdrop-filter:blur(16px);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    z-index:200;
+  }
+  #topbar h1 {
+    font-family:'Cormorant Garamond',serif;
+    font-size:18px; font-weight:600;
+    letter-spacing:0.04em; color:#fff;
+  }
+  #topbar p {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; color:var(--dim);
+    letter-spacing:0.1em; text-transform:uppercase;
+  }
+
+  /* ── MODE TOGGLE ── */
+  #modetoggle {
+    position:fixed; top:64px; left:50%; transform:translateX(-50%);
+    display:flex; gap:0; z-index:200;
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px; overflow:hidden;
+    background:rgba(4,6,13,0.9);
+    backdrop-filter:blur(10px);
+  }
+  .mtab {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+    padding:8px 22px; border:none; cursor:pointer;
+    background:transparent; color:var(--dim);
+    transition:all 0.2s; border-right:1px solid rgba(255,255,255,0.06);
+  }
+  .mtab:last-child { border-right:none; }
+  .mtab.active { background:rgba(255,255,255,0.08); color:#fff; }
+  .mtab:hover:not(.active) { color: rgba(255,255,255,0.6); }
+
+  /* ── NODE DETAIL PANEL ── */
+  #panel {
+    position:fixed; right:20px; top:120px;
+    width:280px;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:16px;
+    padding:22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    opacity:0;
+    transition:opacity 0.25s, transform 0.25s;
+    transform:translateX(20px);
+    z-index:200;
+    pointer-events:none;
+  }
+  #panel.show { opacity:1; transform:translateX(0); }
+  #panel .pname {
+    font-family:'Cormorant Garamond',serif;
+    font-size:22px; font-weight:700;
+    margin-bottom:4px; color:#fff;
+  }
+  #panel .ptype {
+    font-size:9px; letter-spacing:0.14em;
+    text-transform:uppercase; margin-bottom:14px;
+  }
+  #panel .pdesc {
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:11px; line-height:1.75;
+    color:#8892b0; margin-bottom:16px;
+  }
+  #panel .prow {
+    display:flex; justify-content:space-between;
+    padding:6px 0; border-top:1px solid rgba(255,255,255,0.05);
+    color:#4a5580;
+  }
+  #panel .prow span { color:var(--text); }
+  #panel .ptags {
+    margin-top:14px; display:flex; flex-wrap:wrap; gap:6px;
+  }
+  #panel .ptag {
+    font-size:9px; padding:4px 10px; border-radius:4px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.07);
+    color:#6677aa; letter-spacing:0.06em;
+  }
+
+  /* ── LEGEND ── */
+  #legend {
+    position:fixed; bottom:20px; left:20px;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px; padding:18px 22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; z-index:200;
+  }
+  #legend h3 {
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:9px; letter-spacing:0.12em;
+    text-transform:uppercase; color:var(--dim);
+    margin-bottom:14px;
+  }
+  .li { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .lsq { width:32px; height:3px; border-radius:2px; flex-shrink:0; }
+
+  /* ── HINT ── */
+  #hint {
+    position:fixed; bottom:20px; right:20px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; color:var(--dim);
+    text-align:right; line-height:2.2;
+    letter-spacing:0.05em; z-index:200;
+  }
+
+  /* ── SUBLEVEL BREADCRUMB ── */
+  #breadcrumb {
+    position:fixed; top:64px; right:20px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px; color:var(--dim);
+    letter-spacing:0.08em; text-transform:uppercase;
+    z-index:200; opacity:0; transition:opacity 0.3s;
+  }
+  #breadcrumb.show { opacity:1; }
+
+  /* click instruction */
+  #clickhint {
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+    font-family:'IBM Plex Mono',monospace; font-size:10px;
+    color:var(--dim); letter-spacing:0.1em; text-transform:uppercase;
+    z-index:200; animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Psychological Architecture — 4 Core Components</h1>
+  <p>Click any node to expand sublevels</p>
+</div>
+
+<div id="modetoggle">
+  <button class="mtab active" data-mode="overview">Overview</button>
+  <button class="mtab" data-mode="flow">Flow Mode</button>
+  <button class="mtab" data-mode="conflict">Conflict Mode</button>
+</div>
+
+<div id="breadcrumb">Overview → </div>
+
+<div id="panel">
+  <div class="pname" id="pname"></div>
+  <div class="ptype" id="ptype"></div>
+  <div class="pdesc" id="pdesc"></div>
+  <div class="prow">Stability <span id="pstab"></span></div>
+  <div class="prow">Signal in Chat <span id="psig"></span></div>
+  <div class="prow">Detection Ease <span id="pdet"></span></div>
+  <div class="ptags" id="ptags"></div>
+</div>
+
+<div id="legend">
+  <h3>Edge Relationships</h3>
+  <div class="li"><div class="lsq" style="background:#5cdcff"></div>Generates / Causes</div>
+  <div class="li"><div class="lsq" style="background:#5cffa3"></div>Reinforces / Loops back</div>
+  <div class="li"><div class="lsq" style="background:rgba(255,61,90,0.7); background: repeating-linear-gradient(90deg,#ff3d5a 0,#ff3d5a 6px,transparent 6px,transparent 11px)"></div>Suppresses / Blocks</div>
+  <div class="li"><div class="lsq" style="background:#ffad5c"></div>Modulates / Shapes</div>
+</div>
+
+<div id="hint">
+  DRAG to pan<br>
+  SCROLL to zoom<br>
+  CLICK node → sublevels<br>
+  DOUBLE-CLICK → reset
+</div>
+
+<div id="clickhint">↑ Click any node to drill into sublevels</div>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+const COLORS = { E:'#ff3d5a', F:'#ffad5c', I:'#5cdcff', B:'#5cffa3' };
+
+// ─────────────────────────────────────────────
+// DATA: 4 TOP-LEVEL NODES
+// ─────────────────────────────────────────────
+const topNodes = [
+  {
+    id:'E', label:'EMOTION', color:'#ff3d5a', r:58, sig:0.95,
+    stability:'Low–Medium', chatSignal:'High (intensity markers)', detection:'Medium',
+    desc:'Raw, automatic psychophysiological responses to stimuli. Pre-conscious, full-body events. The body fires before the mind can name it. Fear before "I am afraid." Anger before "I feel angry."',
+    tags:['Automatic','Pre-conscious','Bodily','Brief','Universal'],
+    subNodes:[
+      { id:'E1', label:'Fear',      color:'#ff3d5a', r:30, sig:0.92, desc:'Threat-detection signal. Amygdala-driven. Activates fight-flight-freeze before any conscious thought.', tags:['Primary','Survival','Amygdala'] },
+      { id:'E2', label:'Anger',     color:'#ff3d5a', r:28, sig:0.90, desc:'Goal-obstruction signal. High energy, approach-oriented. Autonomy violation activates it most strongly.', tags:['Primary','High-energy','Approach'] },
+      { id:'E3', label:'Sadness',   color:'#ff3d5a', r:26, sig:0.85, desc:'Loss signal. Slows the system. Initiates integration and meaning-making processing.', tags:['Primary','Withdrawal','Loss'] },
+      { id:'E4', label:'Joy',       color:'#ff3d5a', r:26, sig:0.82, desc:'Reward signal. Broadens thinking. Encourages exploration and approach behaviour.', tags:['Primary','Reward','Broaden'] },
+      { id:'E5', label:'Disgust',   color:'#ff3d5a', r:22, sig:0.70, desc:'Rejection signal. Originally biological, now also moral. Drives avoidance of contaminants.', tags:['Primary','Rejection','Moral'] },
+      { id:'E6', label:'Shame',     color:'#ff3d5a', r:28, sig:0.88, desc:'"I am bad." Self-directed threat signal. Highly corrosive to identity and confidence. Distinct from guilt.', tags:['Self-conscious','Identity','Corrosive'] },
+      { id:'E7', label:'Envy',      color:'#ff3d5a', r:22, sig:0.72, desc:'Social comparison emotion. Can motivate ambition or generate hostility depending on appraisal direction.', tags:['Social','Comparison','Complex'] },
+    ],
+    subEdges:[
+      ['E1','E2',0.5,'modulates'],['E3','E6',0.8,'causes'],['E4','E1',0.7,'suppresses'],
+      ['E6','E3',0.75,'amplifies'],['E2','E6',0.5,'causes'],['E7','E2',0.65,'causes'],
+    ]
+  },
+  {
+    id:'F', label:'FEELING', color:'#ffad5c', r:58, sig:0.88,
+    stability:'Medium', chatSignal:'Very High (named states)', detection:'Easy',
+    desc:'The conscious, subjective, named experience of an emotion. What the mind makes of the body\'s signal. You can have an emotion without a feeling, but feelings always have an emotion underneath. "Anxiety" is Fear + Appraisal + Time.',
+    tags:['Conscious','Named','Subjective','Sustained','Cognitive layer'],
+    subNodes:[
+      { id:'F1', label:'Anxiety',    color:'#ffad5c', r:32, sig:0.91, desc:'Fear extended into future uncertainty. Has no fixed object. Chronic anxiety suppresses intention formation and blocks decisive action.', tags:['Future-oriented','Diffuse','Chronic risk'] },
+      { id:'F2', label:'Excitement', color:'#ffad5c', r:26, sig:0.78, desc:'Joy + anticipation. Shares the same physiology as anxiety — only the appraisal differs. Positive anticipation.', tags:['Approach','Positive','Anticipation'] },
+      { id:'F3', label:'Loneliness', color:'#ffad5c', r:26, sig:0.80, desc:'Felt disconnection from others. Motivates social approach or withdrawal depending on attachment history.', tags:['Social','Disconnection','Motivating'] },
+      { id:'F4', label:'Grief',      color:'#ffad5c', r:26, sig:0.82, desc:'Sustained sadness following loss. Requires integration time. Temporarily inhibits future-oriented intentions.', tags:['Loss','Sustained','Integration'] },
+      { id:'F5', label:'Resentment', color:'#ffad5c', r:26, sig:0.76, desc:'Suppressed anger accumulated over time. Poisons relationships without visible cause. Requires no trigger — it lives in the body.', tags:['Suppressed anger','Chronic','Relational'] },
+      { id:'F6', label:'Pride',      color:'#ffad5c', r:22, sig:0.74, desc:'Positive self-evaluation after success. Reinforces identity and future ambitious behaviour when healthy.', tags:['Self-conscious','Positive','Identity-linked'] },
+      { id:'F7', label:'Nostalgia',  color:'#ffad5c', r:20, sig:0.60, desc:'Bittersweet feeling about the past. Reinforces identity continuity. Can trigger grief or motivation.', tags:['Temporal','Identity','Bittersweet'] },
+    ],
+    subEdges:[
+      ['F1','F3',0.6,'amplifies'],['F4','F3',0.7,'causes'],['F5','F1',0.65,'amplifies'],
+      ['F2','F6',0.7,'reinforces'],['F7','F4',0.6,'causes'],['F6','F2',0.55,'reinforces'],
+    ]
+  },
+  {
+    id:'I', label:'INTENTION', color:'#5cdcff', r:58, sig:0.90,
+    stability:'Medium', chatSignal:'High (future tense, plan markers)', detection:'Easy',
+    desc:'The motivational bridge between internal state and external action. Intentions form when emotion + belief + need align toward a goal. They are directional — approach or avoid. The strength of an intention predicts behaviour far better than stated preference.',
+    tags:['Goal-directed','Bridge','Approach/Avoid','Strength matters','Predictive'],
+    subNodes:[
+      { id:'I1', label:'Intent to Act',    color:'#5cdcff', r:32, sig:0.95, desc:'Positive, approach-oriented intention. Requires confidence + positive emotion + aligned need. The strongest predictor of behaviour onset.', tags:['Approach','High-energy','Decisive'] },
+      { id:'I2', label:'Intent to Avoid',  color:'#5cdcff', r:30, sig:0.85, desc:'Protective intention formed under fear or shame. Short-term relief, long-term suppression of growth. CBT\'s primary intervention target.', tags:['Avoidance','Protective','Self-limiting'] },
+      { id:'I3', label:'Ambition',         color:'#5cdcff', r:26, sig:0.88, desc:'Future-directed approach intention fueled by pride, envy, and unmet esteem needs. Sustained by identity anchoring.', tags:['Future-oriented','Identity-linked','High persistence'] },
+      { id:'I4', label:'Suppressed Intent',color:'#5cdcff', r:24, sig:0.80, desc:'An intention formed but not acted upon — blocked by fear, shame, or moral belief. Creates cognitive dissonance and frustration accumulation.', tags:['Blocked','Dissonance','Tension'] },
+      { id:'I5', label:'Hypervigilance',   color:'#5cdcff', r:22, sig:0.72, desc:'Constant threat-scanning intention. Formed by chronic fear or trauma. Consumes cognitive resources while inhibiting approach behaviour.', tags:['Trauma-driven','Exhausting','Blocks approach'] },
+      { id:'I6', label:'Withdrawal Intent',color:'#5cdcff', r:24, sig:0.76, desc:'Decision to disengage — emotionally, socially, or cognitively. Driven by shame, rejection, or overwhelm.', tags:['Disengagement','Shame-driven','Relational'] },
+    ],
+    subEdges:[
+      ['I1','I2',0.8,'suppresses'],['I2','I4',0.75,'causes'],
+      ['I3','I1',0.85,'reinforces'],['I4','I5',0.6,'causes'],
+      ['I5','I2',0.7,'amplifies'],['I6','I4',0.65,'amplifies'],
+    ]
+  },
+  {
+    id:'B', label:'BEHAVIOUR', color:'#5cffa3', r:58, sig:0.85,
+    stability:'Low', chatSignal:'Medium (verb patterns, habit markers)', detection:'Hard (inferred)',
+    desc:'Observable actions — what a person actually does. The output layer of the psychological system. Behaviours feedback into emotions and feelings, creating loops. The most visible layer, yet the hardest to extract from text because people describe intentions more readily than honest behaviour.',
+    tags:['Observable','Output layer','Feedback loops','Habit-forming','Revealing'],
+    subNodes:[
+      { id:'B1', label:'Approach',        color:'#5cffa3', r:30, sig:0.90, desc:'Moving toward goals, people, or experiences. The output of confidence + positive emotion + approach intention.', tags:['Positive','Growth-enabling','Active'] },
+      { id:'B2', label:'Avoidance',       color:'#5cffa3', r:30, sig:0.88, desc:'Moving away from threat or discomfort. Provides short-term relief but prevents exposure and growth. Reinforces anxiety in a feedback loop.', tags:['Self-protective','Anxiety-reinforcing','Central in therapy'] },
+      { id:'B3', label:'Assertion',       color:'#5cffa3', r:26, sig:0.80, desc:'Expressing needs and boundaries directly. Requires confidence + anger regulation + autonomy need fulfillment.', tags:['Healthy','Boundary-setting','Empowering'] },
+      { id:'B4', label:'Withdrawal',      color:'#5cffa3', r:26, sig:0.78, desc:'Social or emotional disengagement. Reinforces loneliness and shame when chronic. Protective in the short term.', tags:['Disengagement','Shame-reinforcing','Social'] },
+      { id:'B5', label:'Procrastination', color:'#5cffa3', r:26, sig:0.82, desc:'Avoidance of anxiety-linked tasks. NOT laziness — it is an emotion regulation strategy. The task triggers discomfort; procrastination removes it briefly.', tags:['Emotion regulation','Avoidance','Misunderstood'] },
+      { id:'B6', label:'Risk Taking',     color:'#5cffa3', r:22, sig:0.76, desc:'Approach behaviour under uncertainty. Requires excitement + confidence belief + tolerance of anxiety. Predicts ambition outcomes.', tags:['Uncertainty','Confidence-linked','Growth'] },
+      { id:'B7', label:'Passive Aggress.',color:'#5cffa3', r:22, sig:0.68, desc:'Indirect expression of suppressed anger. Forms when direct assertion feels unsafe. Erodes trust over time without resolution.', tags:['Suppressed anger','Indirect','Relational damage'] },
+      { id:'B8', label:'Reflection',      color:'#5cffa3', r:22, sig:0.70, desc:'Intentional self-examination behaviour. Converts raw emotional experience into insight. The entry point for meaning-making.', tags:['Meta','Insight-generating','Adaptive'] },
+    ],
+    subEdges:[
+      ['B2','B5',0.85,'causes'],['B2','B4',0.70,'causes'],
+      ['B4','B7',0.60,'causes'],['B1','B6',0.75,'reinforces'],
+      ['B3','B1',0.80,'reinforces'],['B5','B2',0.85,'reinforces'],
+      ['B8','B1',0.65,'causes'],['B7','B4',0.55,'reinforces'],
+    ]
+  },
+];
+
+// MAIN 4-NODE EDGES
+const mainEdges = [
+  { from:'E', to:'F',   w:0.92, type:'causes',    label:'fires into' },
+  { from:'F', to:'I',   w:0.88, type:'causes',    label:'shapes' },
+  { from:'I', to:'B',   w:0.90, type:'causes',    label:'drives' },
+  { from:'B', to:'E',   w:0.75, type:'reinforces', label:'loops back' },
+  { from:'B', to:'F',   w:0.70, type:'reinforces', label:'reinforces' },
+  { from:'F', to:'B',   w:0.65, type:'modulates',  label:'bypasses I' },
+  { from:'E', to:'I',   w:0.60, type:'modulates',  label:'directly charges' },
+  { from:'I', to:'F',   w:0.55, type:'suppresses', label:'suppresses' },
+];
+
+// Edge visual styles
+const ES = {
+  causes:    { color: a => `rgba(92,220,255,${a})`,  dash:[] },
+  reinforces:{ color: a => `rgba(92,255,163,${a})`,  dash:[] },
+  suppresses:{ color: a => `rgba(255,61,90,${a})`,   dash:[6,4] },
+  modulates: { color: a => `rgba(255,173,92,${a})`,  dash:[3,3] },
+};
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let mode = 'overview';
+let expandedNode = null; // which top-node is expanded
+let pan = {x:0,y:0}, scale=1;
+let isPan=false, lm={x:0,y:0};
+let hovered=null;
+let nodes=[], edges=[], frame=0;
+let animating=false, animT=0, animFrom=[], animTo=[];
+
+// position helpers
+function cx(){ return W/2+pan.x; }
+function cy(){ return H/2+pan.y; }
+
+// ─────────────────────────────────────────────
+// BUILD OVERVIEW (4 nodes in a square)
+// ─────────────────────────────────────────────
+function buildOverview() {
+  expandedNode = null;
+  const r = Math.min(W,H)*0.28;
+  const positions = [
+    { id:'E', x:-r*0.85, y:-r*0.7  },
+    { id:'F', x: r*0.85, y:-r*0.7  },
+    { id:'I', x:-r*0.85, y: r*0.7  },
+    { id:'B', x: r*0.85, y: r*0.7  },
+  ];
+  nodes = positions.map(p => {
+    const tn = topNodes.find(n=>n.id===p.id);
+    return { ...tn, x:p.x, y:p.y, vx:0, vy:0, expanded:false };
+  });
+  edges = mainEdges.map(e=>({...e, animated:true}));
+  document.getElementById('breadcrumb').classList.remove('show');
+  document.getElementById('clickhint').style.opacity='1';
+}
+
+// ─────────────────────────────────────────────
+// BUILD EXPANDED VIEW (1 top-node + its children)
+// ─────────────────────────────────────────────
+function buildExpanded(topId) {
+  expandedNode = topId;
+  const tn = topNodes.find(n=>n.id===topId);
+  const center = { id:topId+'_center', label:tn.label, color:tn.color, r:44, sig:tn.sig,
+    desc:tn.desc, tags:tn.tags, stability:tn.stability, chatSignal:tn.chatSignal, detection:tn.detection,
+    x:0, y:0, vx:0, vy:0, isCenter:true, topId };
+
+  const subs = tn.subNodes.map((sn, i) => {
+    const a = (i/tn.subNodes.length)*Math.PI*2 - Math.PI/2;
+    const rd = Math.min(W,H)*0.3;
+    return { ...sn, x:Math.cos(a)*rd, y:Math.sin(a)*rd, vx:0, vy:0, isSub:true, parentId:topId };
+  });
+
+  nodes = [center, ...subs];
+  edges = tn.subEdges.map(([f,t,w,type])=>({ from:f, to:t, w, type, label:type }));
+
+  // Also show faint connections to other top-level components
+  const others = topNodes.filter(n=>n.id!==topId);
+  others.forEach((other,i) => {
+    const a = (i/others.length)*Math.PI*2 + Math.PI*0.3;
+    const rd = Math.min(W,H)*0.45;
+    nodes.push({
+      ...other, x:Math.cos(a)*rd, y:Math.sin(a)*rd, vx:0, vy:0, isOther:true
+    });
+  });
+
+  // Add cross-component edges
+  const cross = mainEdges.filter(e=>e.from===topId||e.to===topId);
+  cross.forEach(e=>{
+    if(e.from===topId) {
+      const sub = subs[0];
+      edges.push({from:sub?.id||topId+'_center', to:e.to, w:e.w*0.5, type:e.type, label:e.label, faint:true});
+    } else {
+      const sub = subs[0];
+      edges.push({from:e.from, to:sub?.id||topId+'_center', w:e.w*0.5, type:e.type, label:e.label, faint:true});
+    }
+  });
+
+  const bc = document.getElementById('breadcrumb');
+  bc.textContent = `Overview → ${tn.label}`;
+  bc.classList.add('show');
+  document.getElementById('clickhint').style.opacity='0';
+}
+
+buildOverview();
+
+// ─────────────────────────────────────────────
+// INTERACTIONS
+// ─────────────────────────────────────────────
+canvas.addEventListener('mousedown', e=>{
+  if(e.button===0){ isPan=true; lm={x:e.clientX,y:e.clientY}; }
+});
+canvas.addEventListener('mousemove', e=>{
+  if(isPan){ pan.x+=e.clientX-lm.x; pan.y+=e.clientY-lm.y; lm={x:e.clientX,y:e.clientY}; }
+  handleHover(e);
+});
+canvas.addEventListener('mouseup', e=>{ isPan=false; });
+canvas.addEventListener('dblclick', e=>{
+  if(expandedNode){ buildOverview(); hidePanel(); }
+});
+canvas.addEventListener('click', e=>{
+  if(isPan) return;
+  const w=toWorld(e.clientX,e.clientY);
+  for(const n of nodes){
+    const dx=n.x-w.x,dy=n.y-w.y;
+    if(Math.sqrt(dx*dx+dy*dy)<n.r+8){
+      if(!expandedNode && topNodes.find(t=>t.id===n.id)){
+        buildExpanded(n.id);
+      } else if(expandedNode && n.isOther){
+        buildExpanded(n.id);
+      } else if(expandedNode && n.isCenter){
+        buildOverview(); hidePanel();
+      } else {
+        showPanel(n);
+      }
+      return;
+    }
+  }
+  hidePanel();
+});
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  scale=Math.max(0.25,Math.min(3,scale*(e.deltaY>0?0.91:1.1)));
+},{passive:false});
+canvas.addEventListener('mouseleave',()=>{ isPan=false; });
+
+document.querySelectorAll('.mtab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    mode=btn.dataset.mode;
+    document.querySelectorAll('.mtab').forEach(b=>{b.classList.remove('active');});
+    btn.classList.add('active');
+  });
+});
+
+function toWorld(mx,my){ return {x:(mx-cx())/scale, y:(my-cy())/scale}; }
+
+let hoveredNode=null;
+function handleHover(e){
+  const w=toWorld(e.clientX,e.clientY);
+  hoveredNode=null;
+  for(const n of nodes){
+    const dx=n.x-w.x,dy=n.y-w.y;
+    if(Math.sqrt(dx*dx+dy*dy)<n.r+8){ hoveredNode=n; break; }
+  }
+  canvas.style.cursor=hoveredNode?'pointer':'grab';
+}
+
+// ─────────────────────────────────────────────
+// PANEL
+// ─────────────────────────────────────────────
+function showPanel(n){
+  const p=document.getElementById('panel');
+  document.getElementById('pname').textContent=n.label;
+  document.getElementById('ptype').textContent=(n.type||'component').toUpperCase();
+  document.getElementById('ptype').style.color=n.color;
+  document.getElementById('pdesc').textContent=n.desc||'';
+  document.getElementById('pstab').textContent=n.stability||'—';
+  document.getElementById('psig').textContent=n.chatSignal||'—';
+  document.getElementById('pdet').textContent=n.detection||'—';
+  const tg=document.getElementById('ptags');
+  tg.innerHTML=(n.tags||[]).map(t=>`<div class="ptag">${t}</div>`).join('');
+  p.classList.add('show');
+}
+function hidePanel(){ document.getElementById('panel').classList.remove('show'); }
+
+// ─────────────────────────────────────────────
+// FORCE SIM
+// ─────────────────────────────────────────────
+function sim(){
+  if(expandedNode) return; // static in expanded
+  const rep=14000, k=300, damp=0.75;
+  nodes.forEach(n=>{ n.vx=0; n.vy=0; });
+  for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){
+    const a=nodes[i],b=nodes[j];
+    let dx=b.x-a.x,dy=b.y-a.y;
+    const d=Math.sqrt(dx*dx+dy*dy)||1;
+    const f=rep/(d*d);
+    a.vx-=(dx/d)*f; a.vy-=(dy/d)*f;
+    b.vx+=(dx/d)*f; b.vy+=(dy/d)*f;
+  }
+  nodes.forEach(n=>{
+    n.vx+=(0-n.x)*0.04; n.vy+=(0-n.y)*0.04;
+    n.x+=n.vx*damp; n.y+=n.vy*damp;
+  });
+}
+
+// ─────────────────────────────────────────────
+// DRAW
+// ─────────────────────────────────────────────
+function drawArrow(x2,y2,angle,color,lw){
+  const L=9;
+  ctx.save();
+  ctx.fillStyle=color; ctx.strokeStyle=color; ctx.lineWidth=lw;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-L*Math.cos(angle-0.45),y2-L*Math.sin(angle-0.45));
+  ctx.lineTo(x2-L*Math.cos(angle+0.45),y2-L*Math.sin(angle+0.45));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function getNodeById(id){ return nodes.find(n=>n.id===id); }
+
+function drawEdge(e){
+  const a=getNodeById(e.from), b=getNodeById(e.to);
+  if(!a||!b) return;
+
+  const isH=hoveredNode&&(hoveredNode.id===e.from||hoveredNode.id===e.to);
+  const style=ES[e.type]||ES.causes;
+  let alpha;
+  if(mode==='conflict') alpha=e.type==='suppresses'?0.9:0.08;
+  else if(mode==='flow') alpha=e.type==='reinforces'?0.05:isH?0.9:0.3+e.w*0.4;
+  else alpha=e.faint?0.08:(isH?0.88:0.2+e.w*0.3);
+
+  const lw=e.faint?0.6:(isH?2.5+e.w*2.5:1+e.w*2);
+
+  // midpoint offset for curve
+  const dx=b.x-a.x, dy=b.y-a.y;
+  const mx=(a.x+b.x)/2+(dy)*0.2;
+  const my=(a.y+b.y)/2-(dx)*0.2;
+
+  ctx.save();
+  ctx.strokeStyle=style.color(alpha);
+  ctx.lineWidth=lw;
+  ctx.setLineDash(style.dash);
+  ctx.beginPath();
+  ctx.moveTo(a.x,a.y);
+  ctx.quadraticCurveTo(mx,my,b.x,b.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Arrow
+  if(isH && !e.faint){
+    const t=0.82;
+    const ex=Math.pow(1-t,2)*a.x+2*(1-t)*t*mx+t*t*b.x;
+    const ey=Math.pow(1-t,2)*a.y+2*(1-t)*t*my+t*t*b.y;
+    const ex2=Math.pow(1-0.88,2)*a.x+2*(1-0.88)*0.88*mx+0.88*0.88*b.x;
+    const ey2=Math.pow(1-0.88,2)*a.y+2*(1-0.88)*0.88*my+0.88*0.88*b.y;
+    const ang=Math.atan2(ey2-ey,ex2-ex);
+    drawArrow(ex2,ey2,ang,style.color(0.95),lw);
+
+    // label
+    ctx.fillStyle=style.color(0.9);
+    ctx.font='500 9px IBM Plex Mono, monospace';
+    ctx.textAlign='center';
+    ctx.fillText(e.label||'',mx,my-8);
+  }
+  ctx.restore();
+}
+
+function drawNode(n){
+  const isH=hoveredNode&&hoveredNode.id===n.id;
+  const isOther=n.isOther;
+  const pulse=0.9+Math.sin(frame*0.03+n.id.charCodeAt(0)*0.8)*0.10;
+  const r=n.r*(isH?1.18:1);
+  const alpha=isOther?0.4:1;
+
+  ctx.save();
+  ctx.globalAlpha=alpha;
+
+  // Outer glow
+  const glow=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*3.2);
+  glow.addColorStop(0,n.color+'33');
+  glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow;
+  ctx.beginPath(); ctx.arc(n.x,n.y,r*3.2*pulse,0,Math.PI*2); ctx.fill();
+
+  // Significance arc
+  ctx.beginPath();
+  ctx.arc(n.x,n.y,r+6,-Math.PI/2,-Math.PI/2+Math.PI*2*n.sig);
+  ctx.strokeStyle=n.color+(isH?'ff':'99');
+  ctx.lineWidth=isH?3:2;
+  ctx.stroke();
+
+  // Body
+  const g=ctx.createRadialGradient(n.x-r*0.3,n.y-r*0.3,0,n.x,n.y,r);
+  g.addColorStop(0,n.color+'dd');
+  g.addColorStop(1,n.color+'55');
+  ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
+  ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle=isH?'#fff':n.color+'aa';
+  ctx.lineWidth=isH?2.5:1.5; ctx.stroke();
+
+  // Label
+  ctx.fillStyle=isH?'#fff':'rgba(255,255,255,0.92)';
+  const isTop=!n.isSub&&!n.isCenter&&!n.isOther;
+  const fs=isTop?14:n.r>30?11:9;
+  ctx.font=`${isTop||n.isCenter?'600':'400'} ${fs}px ${isTop?'Cormorant Garamond, serif':'IBM Plex Sans, sans-serif'}`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+
+  const words=n.label.split(' ');
+  if(words.length>2){
+    ctx.fillText(words.slice(0,Math.ceil(words.length/2)).join(' '),n.x,n.y-6);
+    ctx.fillText(words.slice(Math.ceil(words.length/2)).join(' '),n.x,n.y+8);
+  } else if(isTop||n.isCenter) {
+    // Stacked display for top nodes
+    ctx.font=`600 ${fs+2}px Cormorant Garamond, serif`;
+    ctx.fillText(n.label,n.x,n.y);
+  } else {
+    ctx.fillText(n.label,n.x,n.y);
+  }
+
+  // sig %
+  if(!isOther){
+    ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.font='300 8px IBM Plex Mono, monospace';
+    ctx.fillText((n.sig*100).toFixed(0)+'%',n.x,n.y+r+14);
+  }
+
+  // "tap to expand" for overview top nodes
+  if(isTop && !expandedNode){
+    ctx.fillStyle=n.color+'88';
+    ctx.font='300 8px IBM Plex Mono, monospace';
+    ctx.fillText('click to expand',n.x,n.y+r+26);
+  }
+
+  // center label for expanded
+  if(n.isCenter){
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.font='300 8px IBM Plex Mono, monospace';
+    ctx.fillText('double-click to go back',n.x,n.y+r+26);
+  }
+
+  ctx.restore();
+}
+
+// Draw connecting lines between the 4 nodes (background decoration)
+function drawBackgroundFlow(){
+  if(expandedNode) return;
+  ctx.save();
+  ctx.globalAlpha=0.04;
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth=1;
+  const cycle=['E','F','I','B','E'];
+  for(let i=0;i<4;i++){
+    const a=nodes.find(n=>n.id===cycle[i]);
+    const b=nodes.find(n=>n.id===cycle[i+1]);
+    if(a&&b){
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function draw(){
+  requestAnimationFrame(draw);
+  frame++;
+
+  ctx.clearRect(0,0,W,H);
+
+  // BG
+  const bg=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.75);
+  bg.addColorStop(0,'#080e1f'); bg.addColorStop(1,'#04060d');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle='rgba(255,255,255,0.02)'; ctx.lineWidth=1;
+  const gs=55;
+  for(let x=(cx()%gs+gs)%gs;x<W;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=(cy()%gs+gs)%gs;y<H;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  ctx.save();
+  ctx.translate(cx(),cy());
+  ctx.scale(scale,scale);
+
+  drawBackgroundFlow();
+
+  // Draw edges first
+  edges.forEach(drawEdge);
+
+  // Draw nodes (others first, then main)
+  const others=nodes.filter(n=>n.isOther);
+  const mains=nodes.filter(n=>!n.isOther);
+  others.forEach(drawNode);
+  mains.forEach(drawNode);
+
+  ctx.restore();
+
+  if(frame<120) sim();
+}
+
+// Pre-warm
+for(let i=0;i<60;i++) sim();
+draw();
+</script>
+</body>
+</html>
