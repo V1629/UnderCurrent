@@ -117,6 +117,8 @@ class SpacyFeatureExtractor:
             "nothing ever changes", "it doesn't matter", "no point",
             "never works", "always fails", "can't change"
         }
+        from hedge_scorer import HedgeScorer
+        self.hedge_scorer = HedgeScorer(spacy_model)
     
     def extract(self, sentence: str) -> TenseFeatures:
         """Extract features using spaCy"""
@@ -124,6 +126,8 @@ class SpacyFeatureExtractor:
         text_lower = sentence.lower()
         root_verb = self._get_root_verb(doc)
         
+        # Use the advanced HedgeScorer for context-aware hedge detection
+        hedge_result = self.hedge_scorer.analyze(sentence)
         features = TenseFeatures(
             # Modals - precise with spaCy
             has_modal_will=self._has_modal(doc, "will"),
@@ -131,35 +135,34 @@ class SpacyFeatureExtractor:
             has_modal_should=self._has_modal(doc, "should"),
             has_modal_could=self._has_modal(doc, "could"),
             has_modal_might=self._has_modal(doc, "might"),
-            
+
             # Structure
             has_if_clause="if" in text_lower,
             has_subordinate_clause=self._has_subordinate_clause(doc),
-            
+
             # Aspect
             has_counterfactual_aux=self._matches_any(text_lower, self.counterfactual_patterns),
             has_habitual_adverb=self._matches_any(text_lower, self.habitual_adverbs),
             has_perfective_aspect=self._has_perfective_aspect(doc),
             has_progressive_aspect=self._has_progressive_aspect(doc),
-            
+
             # Tense - from morphology (spaCy)
             tense_morph=self._get_tense(root_verb),
-            
+
             # Semantic
             emotion_words_count=self._count_matches(text_lower, self.emotion_words),
             narrative_markers_count=self._count_matches(text_lower, self.narrative_markers),
             belief_verb=self._has_belief_verb(doc),
             fatalistic_phrase=self._matches_any(text_lower, self.fatalistic_phrases),
-            
+
             # Hedging
-            hedge_score=self._calculate_hedge_score(text_lower),
-            
+            hedge_score=hedge_result.hedge_score,
+
             # Structure
             first_person=self._has_first_person(doc),
-            
+
             sentence=sentence,
         )
-        
         return features
     
     # ---- Helper Methods ----

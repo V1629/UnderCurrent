@@ -33,7 +33,7 @@ from migration import MigrationDetector, detect_contrast_markers
 # ============================================================================
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # <--- set to DEBUG
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -179,16 +179,22 @@ class TASAnalyzer:
     
     def _analyze_sentence(self, text: str) -> SentenceAnalysis:
         """Analyze a single sentence"""
-        
+
         # Classify tense
         classification = self.tense_classifier.classify(text)
         tense_class = classification.tense_class
         confidence = classification.confidence
         features = classification.features
-        
+
+        # DEBUG: Log classifier output for tracing
+        logger.debug(f"Classifier output for sentence: '{text}'")
+        logger.debug(f"  tense_class: {tense_class}")
+        logger.debug(f"  confidence: {confidence}")
+        logger.debug(f"  features: {features}")
+
         # Determine self-referentiality
         self_ref = is_self_referential(text)
-        
+
         # Extract root verb lemma from features (not the full sentence string)
         root_verb = None
         if features is not None:
@@ -210,7 +216,7 @@ class TASAnalyzer:
 
         # Get graph operation — now works correctly since both sides use models.TenseClass
         graph_op = TENSE_TO_DEFAULT_GRAPH_OPERATION.get(tense_class, GraphOperation.NO_OPERATION)
-        
+
         # Determine flags
         flags = []
         if not self_ref:
@@ -221,7 +227,7 @@ class TASAnalyzer:
             flags.append("fatalism_marker")
         if tense_class == TenseClass.COUNTERFACTUAL_PAST:
             flags.append("regret_marker")
-        
+
         return SentenceAnalysis(
             text=text,
             root_verb=root_verb,
